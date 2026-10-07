@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ task.title }}{% endblock %}
+{% block content %}
+<p><a href="/board">&larr; Board</a></p>
+<h2>{{ task.title }}</h2>
+<p><span class="badge">{{ task.status }}</span> <span class="badge">{{ task.priority }}</span> {{ task.phase_name }} &middot; {{ task.requirement_id }} &middot; {{ task.sprint }}</p>
+{% if task.blockers %}<p class="blocker">Blocker: {{ task.blockers }}</p>{% endif %}
+<h3>Process contract</h3>
+<table>
+<tr><th>Process owner</th><td>{{ task.process_owner }}</td></tr>
+<tr><th>RACI</th><td>A: {{ task.accountable_role }} &middot; R: {{ task.responsible_role }} &middot; C: {{ task.consulted_roles }} &middot; I: {{ task.informed_roles }}</td></tr>
+<tr><th>Current work</th><td>{{ task.current_work }}</td></tr>
+<tr><th>Inputs</th><td>{{ task.inputs }}</td></tr>
+<tr><th>Outputs</th><td>{{ task.outputs }}</td></tr>
+<tr><th>Acceptance criteria</th><td>{{ task.acceptance_criteria }}</td></tr>
+<tr><th>Test result / evidence</th><td>{{ task.test_evidence }}</td></tr>
+<tr><th>Risks</th><td>{{ task.risks }}</td></tr>
+<tr><th>Decision / ADR</th><td>{{ task.decision_ref }}</td></tr>
+</table>
+<div class="gates">
+{% for title, items in (("Gate-in checklist", task.gate_in), ("Gate-out checklist", task.gate_out)) %}
+<div><h3>{{ title }}</h3><ul>
+{% for g in items %}
+<li><form method="post" action="/tasks/{{ task.id }}/gates/{{ g.id }}" class="inline">
+<input type="hidden" name="done" value="{{ 0 if g.done else 1 }}"><button>{{ '☑' if g.done else '☐' }}</button> {{ g.text }}</form></li>
+{% else %}<li class="muted">None</li>{% endfor %}
+</ul></div>
+{% endfor %}
+</div>
+<h3>Update status</h3>
+<form method="post" action="/tasks/{{ task.id }}/status" class="stack">
+  <label>Status <select name="status">{% for s in statuses %}<option {{ 'selected' if s == task.status }}>{{ s }}</option>{% endfor %}</select></label>
+  <label>Current work <textarea name="current_work" maxlength="2000">{{ task.current_work }}</textarea></label>
+  <label>Blockers <textarea name="blockers" maxlength="2000">{{ task.blockers }}</textarea></label>
+  <button>Save status</button>
+</form>
+<h3>Evidence, risks &amp; decision</h3>
+<form method="post" action="/tasks/{{ task.id }}/contract" class="stack">
+  <label>Test result / evidence <textarea name="test_evidence" maxlength="2000">{{ task.test_evidence }}</textarea></label>
+  <label>Risks <textarea name="risks" maxlength="2000">{{ task.risks }}</textarea></label>
+  <label>Decision / ADR reference <input name="decision_ref" maxlength="200" value="{{ task.decision_ref }}"></label>
+  <button>Save</button>
+</form>
+<h3>Handoff</h3>
+<form method="post" action="/tasks/{{ task.id }}/handoff" class="stack">
+  <label>Your name <input name="author" maxlength="80"></label>
+  <label>Next role <select name="to_role">{% for r in roles %}<option>{{ r.name }}</option>{% endfor %}</select></label>
+  <label>Note <textarea name="note" required maxlength="2000"></textarea></label>
+  <button>Record handoff</button>
+</form>
+{% if task.handoffs %}<ul>{% for h in task.handoffs %}<li>{{ h.created_at }}: {{ h.from_role }} &rarr; {{ h.to_role }} &ndash; {{ h.note }}</li>{% endfor %}</ul>{% endif %}
+<h3>Discussion</h3>
+<form method="post" action="/tasks/{{ task.id }}/comments" class="stack">
+  <label>Name <input name="author" required maxlength="80"></label>
+  <label>Role <select name="role">{% for r in roles %}<option>{{ r.name }}</option>{% endfor %}</select></label>
+  <label>Type <select name="kind">{% for k in kinds %}<option>{{ k }}</option>{% endfor %}</select></label>
+  <label>Message <textarea name="body" required maxlength="2000"></textarea></label>
+  <button>Post</button>
+</form>
+<ul class="feed">{% for c in task.comments %}
+<li class="kind-{{ c.kind }}"><strong>{{ c.author }}</strong> ({{ c.role }}) <span class="badge">{{ c.kind }}</span> <span class="muted">{{ c.created_at }}</span><br>{{ c.body }}</li>
+{% else %}<li class="muted">No updates yet.</li>{% endfor %}</ul>
+{% endblock %}

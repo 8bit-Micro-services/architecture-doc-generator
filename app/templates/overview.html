@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>SDLC phase flow &amp; gate readiness</h2>
+<ol class="flow">
+{% for r in readiness %}
+  <li class="state-{{ r.state|replace(' ', '-')|lower }}">
+    <h3><a href="/board?phase={{ r.phase.id }}">{{ r.phase.position }}. {{ r.phase.name }}</a></h3>
+    <p class="muted">{{ r.phase.iso_process }}</p>
+    <p><strong>{{ r.state }}</strong> &middot; gate-out {{ r.gate_done }}/{{ r.gate_total }} ({{ r.percent }}%) &middot; {{ r.tasks }} task(s){% if r.blocked %} &middot; {{ r.blocked }} blocked{% endif %}</p>
+    <progress max="100" value="{{ r.percent }}"></progress>
+    <dl>
+      <dt>Accountable / Responsible</dt><dd>{{ r.phase.accountable }} / {{ r.phase.responsible }}</dd>
+      <dt>Inputs</dt><dd>{{ r.phase.inputs|replace('\n', '; ') }}</dd>
+      <dt>Outputs</dt><dd>{{ r.phase.outputs|replace('\n', '; ') }}</dd>
+      <dt>Entry criteria (gate-in)</dt><dd>{{ r.phase.entry_criteria }}</dd>
+      <dt>Exit criteria (gate-out)</dt><dd>{{ r.phase.exit_criteria }}</dd>
+      <dt>Artifacts</dt><dd>{{ r.phase.artifacts|replace('\n', '; ') }}</dd>
+    </dl>
+  </li>
+{% endfor %}
+</ol>
+<h2>Roles</h2>
+<ul class="roles">{% for role in roles %}<li><a href="/board?role={{ role.name|urlencode }}"><strong>{{ role.name }}</strong></a> &ndash; {{ role.description }}</li>{% endfor %}</ul>
+{% endblock %}
