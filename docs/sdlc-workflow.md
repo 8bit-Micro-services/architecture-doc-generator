@@ -49,3 +49,36 @@ Failed gates send work back to Design or Development; retrospective output feeds
 A job records input document names and the expected outputs `architecture.drawio`, `architecture.png` and
 `architecture-presentation.pptx`, plus a test state (`Not Run`, `Running`, `Passed`, `Failed`).
 Parsers and generators are future work tracked on the board (OpenAPI parser, Draw.io generator, PPTX generator).
+
+## Architecture output and review standard
+
+Register a review package as individually versioned documents linked to their requirement/task. The seeded package
+includes an executive summary, requirements traceability, C4 system context/container/component views, data flow,
+deployment, security architecture, ADRs, presentation, and validation/E2E report. Each artifact records an owner,
+department, lifecycle status, source/preview, and approver. A registry entry is not proof that a generated file exists;
+the MVP tracks metadata and sample previews but does not generate Draw.io, PNG, or PPTX files.
+
+The Solution Architect owns the architecture baseline. The Technical Lead reviews component and implementation
+contracts; Security Reviewer reviews threats, department isolation, and sensitive data handling; QA reviews
+traceability and testability. Gate-in requires reviewed requirements, constraints, and upstream outputs. Gate-out
+requires architectural decisions, security review as applicable, QA traceability, and explicit review status.
+Return incomplete or rejected work for rework before approval.
+
+Use a consistent document title, type, department, owner, version, linked requirement/task, source, update date,
+review status, and named approver. Diagrams should state scope and boundaries, identify components and owners, and
+label data flows. Presentations should include project/version/date, scope, context, containers/components,
+deployment, security, decisions/risks, and gate/test evidence. Record test/validation evidence rather than marking
+the architecture package complete on the basis of a placeholder job.
+
+## Department knowledge workflow and security
+
+Seed departments are HR, IT/Engineering, Finance, and Operations. A knowledge document belongs to exactly one
+department and carries classification, owner, approval lifecycle, effective date, source, and indexing status
+(`Not Indexed`, `Ready`, or `Needs Review`). The manual workflow is: register → classify → review → approve → mark
+ready for search. Search must retain the selected department scope.
+
+Manual Only is the default and does not send content or queries to an AI service. Local AI/RAG is future-ready but
+not configured; cloud AI is disabled/not configured. HR examples contain fictional policy/SOP text, not employee
+records. Keep real HR/PII data private. Before enabling real RAG or online use, implement authentication/RBAC,
+department isolation, audit trails, and reviewed local/cloud provider configuration. Those security controls and
+AI integrations are outside this MVP.

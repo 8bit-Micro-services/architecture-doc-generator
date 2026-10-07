@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">DEPARTMENT KNOWLEDGE</p><h2>Knowledge Base</h2>
+<p class="muted">Search approved department-scoped knowledge manually. Each result remains limited to the selected department.</p></div></div>
+<section class="mode-panel"><strong>Mode: {{ mode.default }}</strong><span>{{ mode.notice }}</span>
+  <span>{{ mode.local }} · {{ mode.cloud }}</span></section>
+<form method="get" action="/knowledge" class="filter-panel knowledge-search">
+  <label>Department <select name="department" required><option value="">Choose a department</option>{% for item in departments %}<option value="{{ item }}" {{ "selected" if selected_department == item }}>{{ item }}</option>{% endfor %}</select></label>
+  <label>Manual search <input name="q" value="{{ query }}" maxlength="200" placeholder="Search title, source, or content"></label>
+  <button type="submit">Search knowledge</button>
+</form>
+{% if selected_department %}
+  <h3>{{ selected_department }} knowledge · {{ documents|length }} result(s)</h3>
+  {% if documents %}<div class="document-grid">{% for d in documents %}
+  <article class="document-card"><div class="work-meta"><span class="status-badge state-{{ d.status|lower|replace(' ', '-') }}">{{ d.status }}</span><span>{{ d.indexing_status }}</span></div>
+    <h3><a href="/documents/{{ d.id }}">{{ d.title }}</a></h3><p>{{ d.content|truncate(220) }}</p>
+    <p class="muted">{{ d.source }} · {{ d.classification }}{% if d.effective_date %} · Effective {{ d.effective_date }}{% endif %}</p></article>
+  {% endfor %}</div>{% else %}<p class="empty-state">No knowledge documents match this department and search.</p>{% endif %}
+{% else %}<p class="empty-state">Choose one department before searching. The search will not cross department boundaries.</p>{% endif %}
+<section class="panel security-note"><h3>Security and RAG readiness</h3><p>Demo HR entries contain fictional policy/SOP text only. Keep HR and PII documents private. This MVP does not authenticate users or provide production access controls. Real RAG requires RBAC, strict department isolation, audit trails, and an explicitly configured local or cloud provider; no external AI calls are implemented.</p></section>
+{% endblock %}

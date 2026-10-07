@@ -54,7 +54,8 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     def overview(request: Request, conn: sqlite3.Connection = Conn):
         return render(request, "overview.html", readiness=services.phase_readiness(conn),
-                      roles=services.list_roles(conn))
+                      roles=services.list_roles(conn), summary=services.dashboard_summary(conn),
+                      current_work=services.current_work_by_role(conn))
 
     @app.get("/board", response_class=HTMLResponse)
     def board(request: Request, role: str = "", phase: str = "", status: str = "",
@@ -127,6 +128,59 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
     def job_state(job_id: int, test_state: str = Form(""), conn: sqlite3.Connection = Conn):
         services.update_job_state(conn, job_id, test_state)
         return RedirectResponse("/jobs", status_code=303)
+
+    @app.get("/documents", response_class=HTMLResponse)
+    def documents(request: Request, q: str = "", document_type: str = "", department: str = "",
+                  status: str = "", owner_role: str = "", conn: sqlite3.Connection = Conn):
+        return render(
+            request, "documents.html",
+            documents=services.list_documents(conn, query=q, document_type=document_type,
+                                               department=department, status=status, owner_role=owner_role),
+            types=services.DOCUMENT_TYPES, statuses=services.DOCUMENT_STATUSES,
+            departments=services.list_departments(conn), roles=services.list_roles(conn),
+            filters={"q": q, "document_type": document_type, "department": department,
+                     "status": status, "owner_role": owner_role},
+        )
+
+    @app.post("/documents")
+    def create_document(title: str = Form(""), document_type: str = Form(""),
+                        department: str = Form(""), owner_role: str = Form(""),
+                        status: str = Form("Draft"), version: str = Form("1.0"),
+                        linked_requirement: str = Form(""), linked_task_id: str = Form(""),
+                        source: str = Form(""), content: str = Form(""),
+                        approver: str = Form(""), classification: str = Form("Internal"),
+                        indexing_status: str = Form("Not Indexed"), effective_date: str = Form(""),
+                        author: str = Form(""), conn: sqlite3.Connection = Conn):
+        document_id = services.create_document(
+            conn, title=title, document_type=document_type, department=department,
+            owner_role=owner_role, status=status, version=version,
+            linked_requirement=linked_requirement, linked_task_id=linked_task_id,
+            source=source, content=content, approver=approver, classification=classification,
+            indexing_status=indexing_status, effective_date=effective_date, author=author,
+        )
+        return RedirectResponse(app.url_path_for("document_detail", document_id=document_id), status_code=303)
+
+    @app.get("/documents/{document_id}", response_class=HTMLResponse, name="document_detail")
+    def document_detail(request: Request, document_id: int, conn: sqlite3.Connection = Conn):
+        document = services.get_document(conn, document_id)
+        if document is None:
+            return error(request, "document not found", 404)
+        return render(request, "document.html", document=document, statuses=services.DOCUMENT_STATUSES,
+                      roles=services.list_roles(conn))
+
+    @app.post("/documents/{document_id}/status")
+    def document_status(document_id: int, status: str = Form(""), approver: str = Form(""),
+                        author: str = Form(""), role: str = Form(""), conn: sqlite3.Connection = Conn):
+        services.update_document_status(conn, document_id, status=status, approver=approver,
+                                        author=author, role=role)
+        return RedirectResponse(app.url_path_for("document_detail", document_id=document_id), status_code=303)
+
+    @app.get("/knowledge", response_class=HTMLResponse)
+    def knowledge(request: Request, department: str = "", q: str = "",
+                  conn: sqlite3.Connection = Conn):
+        docs = services.list_documents(conn, query=q, department=department, knowledge_only=True) if department else []
+        return render(request, "knowledge.html", documents=docs, departments=services.list_departments(conn),
+                      selected_department=department, query=q, mode=services.knowledge_mode())
 
     return app
 
