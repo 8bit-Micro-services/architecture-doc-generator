@@ -1,0 +1,102 @@
+<mxfile host="app.diagrams.net" modified="2026-10-07T00:00:00.000Z" agent="Mozilla/5.0" version="24.0.0">
+  <diagram id="container-arch" name="Container Architecture (C4 L2)">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Header -->
+        <mxCell id="title" value="SDLC Workboard - Container Architecture (C4 Level 2)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#1E293B;" vertex="1" parent="1">
+          <mxGeometry x="280" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="High-level technical containers, communication protocols, and execution boundaries" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#64748B;" vertex="1" parent="1">
+          <mxGeometry x="280" y="55" width="600" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Container: Client Browser -->
+        <mxCell id="cnt-browser" value="&lt;b&gt;Web Browser&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot; color=&quot;#475569&quot;&gt;[Container: Chrome / Firefox / Safari / Edge]&lt;br&gt;Server-rendered HTML5 with Jinja2 auto-escaping, CSS custom styling, responsive layout, form posts&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#2563EB;fontColor=#1E3A8A;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="240" width="220" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Process Boundary: Python Local Runtime -->
+        <mxCell id="bnd-python" value="&lt;b&gt;Local Python Application Runtime (Loopback 127.0.0.1)&lt;/b&gt;" style="swimlane;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#475569;strokeWidth=2;fontColor=#0F172A;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="380" y="110" width="460" height="650" as="geometry" />
+        </mxCell>
+
+        <!-- Launcher -->
+        <mxCell id="cnt-launcher" value="&lt;b&gt;CLI Launcher Process&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot; color=&quot;#475569&quot;&gt;[Module: app.launcher]&lt;br&gt;CLI argument parsing (--port, --no-browser), port availability discovery, browser launch, Uvicorn server supervisor&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#D97706;fontColor=#92400E;align=center;" vertex="1" parent="bnd-python">
+          <mxGeometry x="40" y="40" width="380" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- FastAPI Web App -->
+        <mxCell id="cnt-fastapi" value="&lt;b&gt;FastAPI Web Application&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot; color=&quot;#475569&quot;&gt;[Container: FastAPI + Uvicorn (app.main)]&lt;br&gt;Thin HTTP route handlers, exception filters, static file server, Jinja2 template rendering context&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#3B82F6;fontColor=#1E3A8A;align=center;" vertex="1" parent="bnd-python">
+          <mxGeometry x="40" y="150" width="380" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Jinja2 & Static Assets -->
+        <mxCell id="cnt-templates" value="&lt;b&gt;Jinja2 Templates &amp; Static Assets&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot; color=&quot;#475569&quot;&gt;[app/templates/*.html, app/static/style.css]&lt;br&gt;Auto-escaped HTML templates (overview, board, task, document, knowledge, jobs)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#64748B;fontColor=#334155;align=center;" vertex="1" parent="bnd-python">
+          <mxGeometry x="40" y="260" width="380" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Services Layer -->
+        <mxCell id="cnt-services" value="&lt;b&gt;Business Services &amp; Domain Logic&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot; color=&quot;#475569&quot;&gt;[Module: app.services]&lt;br&gt;Task state machines, gate checklists, handoff history, document lifecycle, department-scoped manual search, job tracking&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#059669;fontColor=#065F46;align=center;" vertex="1" parent="bnd-python">
+          <mxGeometry x="40" y="350" width="380" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- DB Layer & Seed Data -->
+        <mxCell id="cnt-db-layer" value="&lt;b&gt;Database Access &amp; Seed Engine&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot; color=&quot;#475569&quot;&gt;[Modules: app.db, app.seed_data]&lt;br&gt;Connection management (PRAGMA foreign_keys, WAL), DDL schema creation, ISO phase seeding&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E8FF;strokeColor=#7C3AED;fontColor=#5B21B6;align=center;" vertex="1" parent="bnd-python">
+          <mxGeometry x="40" y="460" width="380" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cnt-sqlite" value="&lt;b&gt;SQLite Database File&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot; color=&quot;#475569&quot;&gt;[workboard.sqlite3 (Local Disk)]&lt;br&gt;Persistent relational storage for tasks, gates, comments, handoffs, documents, jobs&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#E2E8F0;strokeColor=#475569;fontColor=#1E293B;align=center;" vertex="1" parent="bnd-python">
+          <mxGeometry x="100" y="560" width="260" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Packaging & Distribution -->
+        <mxCell id="cnt-pyinstaller" value="&lt;b&gt;PyInstaller Distribution Bundle&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot; color=&quot;#475569&quot;&gt;[dist/SDLC-Workboard (onedir)]&lt;br&gt;Bundled platform-specific executable containing Python interpreter, compiled bytecode, static files, and templates&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;fontColor=#78350F;align=center;" vertex="1" parent="1">
+          <mxGeometry x="890" y="140" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Test Suite Container -->
+        <mxCell id="cnt-tests" value="&lt;b&gt;Automated Test Suite&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot; color=&quot;#475569&quot;&gt;[pytest + httpx TestClient]&lt;br&gt;• tests/test_http.py (FastAPI endpoints)&lt;br&gt;• tests/test_services.py (Domain validation)&lt;br&gt;• tests/conftest.py (In-memory DB fixtures)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontColor=#1F2937;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="890" y="320" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Document File Repository -->
+        <mxCell id="cnt-docs-fs" value="&lt;b&gt;Local Document Artifacts&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot; color=&quot;#475569&quot;&gt;• docs/architecture/*.drawio&lt;br&gt;• docs/sdlc-workflow.md&lt;br&gt;• requirements.txt &amp; pytest.ini&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontColor=#1F2937;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="890" y="500" width="230" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="edge-browser-fastapi" value="HTTP GET/POST&lt;br&gt;127.0.0.1:8000" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="cnt-browser" target="cnt-fastapi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-launcher-fastapi" value="Initializes &amp; Serves" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="bnd-python" source="cnt-launcher" target="cnt-fastapi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-fastapi-templates" value="Renders HTML" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="bnd-python" source="cnt-fastapi" target="cnt-templates">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-fastapi-services" value="Invokes Business Logic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="bnd-python" source="cnt-templates" target="cnt-services">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-services-db" value="Queries / Updates" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="bnd-python" source="cnt-services" target="cnt-db-layer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-db-sqlite" value="SQL Operations" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="bnd-python" source="cnt-db-layer" target="cnt-sqlite">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-tests-fastapi" value="Simulates Requests" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" edge="1" parent="1" source="cnt-tests" target="cnt-fastapi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
