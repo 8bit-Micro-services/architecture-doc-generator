@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="get" action="/board" class="filters">
+  <label>Role <select name="role"><option value="">All</option>{% for r in roles %}<option value="{{ r.name }}" {{ 'selected' if r.name == sel_role }}>{{ r.name }}</option>{% endfor %}</select></label>
+  <label>Phase <select name="phase"><option value="">All</option>{% for p in phases %}<option value="{{ p.id }}" {{ 'selected' if p.id|string == sel_phase }}>{{ p.name }}</option>{% endfor %}</select></label>
+  <label>Status <select name="status"><option value="">All</option>{% for s in statuses %}<option {{ 'selected' if s == sel_status }}>{{ s }}</option>{% endfor %}</select></label>
+  <button>Filter</button> <a href="/board">Reset</a>
+</form>
+<div class="board">
+{% for phase, tasks in columns %}
+  <section class="column"><h3>{{ phase.name }} <span class="count">{{ tasks|length }}</span></h3>
+  {% for t in tasks %}
+    <article class="card status-{{ t.status|replace(' ', '-')|lower }}">
+      <h4><a href="/tasks/{{ t.id }}">{{ t.title }}</a></h4>
+      <p class="muted">{{ t.phase_name }} &middot; {{ t.requirement_id or 'no req' }} &middot; {{ t.sprint or 'no sprint' }}</p>
+      <p><span class="badge">{{ t.status }}</span> <span class="badge prio-{{ t.priority|lower }}">{{ t.priority }}</span></p>
+      <p>A: {{ t.accountable_role }}<br>R: <strong>{{ t.responsible_role }}</strong></p>
+      <p class="work">{{ t.current_work }}</p>
+      {% if t.blockers %}<p class="blocker">Blocker: {{ t.blockers }}</p>{% endif %}
+    </article>
+  {% endfor %}
+  </section>
+{% endfor %}
+</div>
+<details><summary>New task</summary>
+<form method="post" action="/tasks" class="stack">
+  <label>Title <input name="title" required maxlength="200"></label>
+  <label>Phase <select name="phase_id">{% for p in phases %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
+  <label>Accountable <select name="accountable_role">{% for r in roles %}<option>{{ r.name }}</option>{% endfor %}</select></label>
+  <label>Responsible <select name="responsible_role">{% for r in roles %}<option>{{ r.name }}</option>{% endfor %}</select></label>
+  <label>Priority <select name="priority">{% for p in priorities %}<option {{ 'selected' if p == 'Medium' }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Sprint <input name="sprint" maxlength="200"></label>
+  <label>Requirement ID <input name="requirement_id" maxlength="200"></label>
+  <label>Current work <textarea name="current_work" maxlength="2000"></textarea></label>
+  <button>Create</button>
+</form></details>
+{% endblock %}

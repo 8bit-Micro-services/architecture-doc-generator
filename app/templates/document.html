@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="breadcrumb"><a href="/documents">Documents</a> / {{ document.document_type }}</p>
+<div class="page-heading"><div><p class="eyebrow">{{ document.department }} · {{ document.document_type }}</p><h2>{{ document.title }}</h2>
+<p class="muted">Version {{ document.version }} · Updated {{ document.updated_at }}</p></div>
+<span class="status-badge state-{{ document.status|lower|replace(' ', '-') }}">{{ document.status }}</span></div>
+<section class="detail-grid">
+  <article class="panel"><h3>Document metadata</h3><dl>
+    <dt>Owner role</dt><dd>{{ document.owner_role }}</dd>
+    <dt>Department</dt><dd>{{ document.department }}</dd>
+    <dt>Classification</dt><dd>{{ document.classification }}</dd>
+    <dt>Source / path</dt><dd>{{ document.source or "Not supplied" }}</dd>
+    <dt>Approver</dt><dd>{{ document.approver or "Awaiting approval" }}</dd>
+    <dt>Effective date</dt><dd>{{ document.effective_date or "Not set" }}</dd>
+    <dt>Indexing status</dt><dd>{{ document.indexing_status }}</dd>
+    <dt>Linked requirement</dt><dd>{{ document.linked_requirement or "None" }}</dd>
+    <dt>Linked task</dt><dd>{% if document.linked_task_id %}<a href="/tasks/{{ document.linked_task_id }}">{{ document.linked_task_title or ("Task " ~ document.linked_task_id) }}</a>{% else %}None{% endif %}</dd>
+  </dl></article>
+  <article class="panel"><h3>Lifecycle and review</h3>
+    {% if document.document_type == "Architecture Design" %}
+    <dl><dt>Inputs</dt><dd>Linked requirement and task, project constraints, approved upstream artifacts.</dd>
+    <dt>Outputs</dt><dd>{{ document.source }} · related review artifacts listed below.</dd>
+    <dt>Gate-in</dt><dd>Requirements and design inputs reviewed by the accountable roles.</dd>
+    <dt>Gate-out</dt><dd>Solution Architect and Technical Lead approval; security and QA review as applicable.</dd>
+    <dt>Review roles</dt><dd>Solution Architect, Technical Lead, Security Reviewer, QA Engineer.</dd>
+    <dt>Lifecycle status</dt><dd>{{ document.status }} · {{ document.indexing_status }}</dd></dl>
+    {% else %}<p>Status: <strong>{{ document.status }}</strong>. Indexing: {{ document.indexing_status }}.</p>{% endif %}
+    <form method="post" action="/documents/{{ document.id }}/status" class="form-grid compact">
+      <label>Set status <select name="status">{% for item in statuses %}<option {{ "selected" if item == document.status }}>{{ item }}</option>{% endfor %}</select></label>
+      <label>Approver (required to approve) <input name="approver" value="{{ document.approver }}" maxlength="80"></label>
+      <label>Updated by <input name="author" maxlength="80"></label>
+      <label>Role <select name="role">{% for item in roles %}<option>{{ item.name }}</option>{% endfor %}</select></label>
+      <button type="submit">Update lifecycle</button>
+    </form>
+  </article>
+</section>
+<section class="panel content-preview"><h3>Content / preview</h3><pre>{{ document.content or "No text preview recorded. Use the source path to locate the artifact." }}</pre></section>
+<section class="panel"><h3>Related output artifacts</h3>
+{% if document.related %}<ul>{% for item in document.related %}<li><a href="/documents/{{ item.id }}">{{ item.title }}</a> · {{ item.document_type }} · {{ item.status }}</li>{% endfor %}</ul>
+{% else %}<p class="muted">No related artifacts share this requirement yet.</p>{% endif %}</section>
+<section class="panel"><h3>Activity</h3>
+{% if document.activity %}<ul class="feed">{% for event in document.activity %}<li><strong>{{ event.action|title }}</strong> · {{ event.author }} ({{ event.role }}) · {{ event.created_at }}<p>{{ event.note }}</p></li>{% endfor %}</ul>
+{% else %}<p class="muted">No activity recorded.</p>{% endif %}</section>
+{% endblock %}

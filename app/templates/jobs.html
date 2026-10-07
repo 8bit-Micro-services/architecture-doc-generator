@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Architecture generation jobs (placeholder tracking)</h2>
+<table><tr><th>Job</th><th>Input documents</th><th>Expected outputs</th><th>Test state</th></tr>
+{% for j in jobs %}
+<tr><td>{{ j.name }}</td><td>{{ j.input_documents }}</td>
+<td>{{ j.drawio_output }}<br>{{ j.image_output }}<br>{{ j.pptx_output }}</td>
+<td><form method="post" action="/jobs/{{ j.id }}/state" class="inline"><select name="test_state">{% for s in states %}<option {{ 'selected' if s == j.test_state }}>{{ s }}</option>{% endfor %}</select> <button>Set</button></form></td></tr>
+{% endfor %}</table>
+<h3>New job</h3>
+<form method="post" action="/jobs" class="stack">
+  <label>Name <input name="name" required maxlength="200"></label>
+  <label>Input document names <textarea name="input_documents" required maxlength="2000" placeholder="openapi.yaml, deployment.yaml"></textarea></label>
+  <button>Create job</button>
+</form>
+{% endblock %}
