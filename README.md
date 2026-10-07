@@ -14,7 +14,7 @@ including the placeholder jobs that will later produce `architecture.drawio`, a 
   test evidence, risks, ADR), discussion feed (update / blocker / decision / handoff), status updates and handoffs
 - Overview page with phase flow and gate readiness (Ready / In Progress / At Risk / Not Started)
 - Architecture job tracker (input documents, expected outputs, test-result state)
-- Seeded on first run with 10 roles, 8 phases, 13 tasks, discussion entries and one job
+- Seeded on first run with 10 roles, 8 phases, 12 tasks, discussion entries and one job
 
 ## Architecture
 FastAPI + server-rendered Jinja2 templates (auto-escaped) + SQLite (stdlib `sqlite3`).

@@ -190,7 +190,6 @@ JOBS: list[tuple[str, str, str, str, str, str]] = [
 ]
 
 
-
 def seed(conn: sqlite3.Connection) -> None:
     conn.executemany("INSERT INTO roles (name, description) VALUES (?, ?)", ROLES)
     for pos, p in enumerate(PHASES, start=1):
