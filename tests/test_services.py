@@ -95,6 +95,12 @@ def test_status_preserves_fields_and_done_clears_blockers(conn):
 def test_update_contract_and_gate_mismatch(conn):
     services.update_contract(conn, 3, test_evidence="ok", risks="r", decision_ref="ADR-9")
     assert services.get_task(conn, 3)["decision_ref"] == "ADR-9"
+    services.update_contract(conn, 3, risks="updated risk")
+    task = services.get_task(conn, 3)
+    assert task["test_evidence"] == "ok" and task["decision_ref"] == "ADR-9"
+    services.update_contract(conn, 3, test_evidence="", risks="", decision_ref="")
+    task = services.get_task(conn, 3)
+    assert task["test_evidence"] == task["risks"] == task["decision_ref"] == ""
     gate_id = services.get_task(conn, 3)["gate_in"][0]["id"]
     with pytest.raises(LookupError):
         services.set_gate_item(conn, 4, gate_id, True)
@@ -145,3 +151,7 @@ def test_document_approval_requires_approver(conn):
         services.update_document_status(conn, doc["id"], status="Approved")
     services.update_document_status(conn, doc["id"], status="Approved", approver="Architect")
     assert services.get_document(conn, doc["id"])["approver"] == "Architect"
+    services.update_document_status(conn, doc["id"], status="Rework")
+    assert services.get_document(conn, doc["id"])["approver"] == "Architect"
+    services.update_document_status(conn, doc["id"], status="Rework", approver="")
+    assert services.get_document(conn, doc["id"])["approver"] == ""

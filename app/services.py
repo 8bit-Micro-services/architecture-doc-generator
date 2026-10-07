@@ -169,14 +169,18 @@ def record_handoff(conn: sqlite3.Connection, task_id: int, *, to_role: str, note
     conn.commit()
 
 
-def update_contract(conn: sqlite3.Connection, task_id: int, *, test_evidence: str, risks: str,
-                    decision_ref: str) -> None:
-    if conn.execute("SELECT 1 FROM tasks WHERE id = ?", (task_id,)).fetchone() is None:
+def update_contract(conn: sqlite3.Connection, task_id: int, *, test_evidence: Optional[str] = None,
+                    risks: Optional[str] = None, decision_ref: Optional[str] = None) -> None:
+    task = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if task is None:
         raise LookupError("task not found")
+    test_evidence = task["test_evidence"] if test_evidence is None else _text(
+        test_evidence, "test evidence", required=False, max_len=MAX_LONG)
+    risks = task["risks"] if risks is None else _text(risks, "risks", required=False, max_len=MAX_LONG)
+    decision_ref = task["decision_ref"] if decision_ref is None else _text(
+        decision_ref, "decision/ADR reference", required=False)
     conn.execute("UPDATE tasks SET test_evidence = ?, risks = ?, decision_ref = ? WHERE id = ?", (
-        _text(test_evidence, "test evidence", required=False, max_len=MAX_LONG),
-        _text(risks, "risks", required=False, max_len=MAX_LONG),
-        _text(decision_ref, "decision/ADR reference", required=False), task_id))
+        test_evidence, risks, decision_ref, task_id))
     conn.commit()
 
 
@@ -342,12 +346,13 @@ def create_document(conn: sqlite3.Connection, *, title: str, document_type: str,
 
 
 def update_document_status(conn: sqlite3.Connection, document_id: int, *, status: str,
-                           approver: str = "", author: str = "", role: str = "") -> None:
+                           approver: Optional[str] = None, author: str = "", role: str = "") -> None:
     status = _choice(status, "document status", DOCUMENT_STATUSES)
     document = conn.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
     if document is None:
         raise LookupError("document not found")
-    approver = _text(approver, "approver", required=False, max_len=80)
+    approver = document["approver"] if approver is None else _text(
+        approver, "approver", required=False, max_len=80)
     author = _text(author, "author", required=False, max_len=80) or document["owner_role"]
     role = _role(conn, role or document["owner_role"], "role")
     if status == "Approved" and not approver:

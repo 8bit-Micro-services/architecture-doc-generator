@@ -75,3 +75,14 @@ def test_document_filter_create_detail_and_approval(client):
         "status": "Approved", "approver": "HR reviewer", "role": "Business Analyst",
     })
     assert approved.status_code == 200 and "HR reviewer" in approved.text
+    changed = client.post(f"/documents/{document_id}/status", data={"status": "Rework"})
+    assert changed.status_code == 200 and "HR reviewer" in changed.text
+
+
+def test_contract_update_preserves_omitted_fields(client):
+    client.post("/tasks/3/contract", data={
+        "test_evidence": "passed", "risks": "review", "decision_ref": "ADR-1",
+    })
+    response = client.post("/tasks/3/contract", data={"risks": "updated"})
+    assert response.status_code == 200
+    assert "passed" in response.text and "updated" in response.text and "ADR-1" in response.text

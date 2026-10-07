@@ -104,8 +104,8 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
         return back_to_task(task_id)
 
     @app.post("/tasks/{task_id}/contract")
-    def task_contract(task_id: int, test_evidence: str = Form(""), risks: str = Form(""),
-                      decision_ref: str = Form(""), conn: sqlite3.Connection = Conn):
+    def task_contract(task_id: int, test_evidence: Optional[str] = Form(None), risks: Optional[str] = Form(None),
+                      decision_ref: Optional[str] = Form(None), conn: sqlite3.Connection = Conn):
         services.update_contract(conn, task_id, test_evidence=test_evidence, risks=risks,
                                  decision_ref=decision_ref)
         return back_to_task(task_id)
@@ -169,7 +169,7 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
                       roles=services.list_roles(conn))
 
     @app.post("/documents/{document_id}/status")
-    def document_status(document_id: int, status: str = Form(""), approver: str = Form(""),
+    def document_status(document_id: int, status: str = Form(""), approver: Optional[str] = Form(None),
                         author: str = Form(""), role: str = Form(""), conn: sqlite3.Connection = Conn):
         services.update_document_status(conn, document_id, status=status, approver=approver,
                                         author=author, role=role)
