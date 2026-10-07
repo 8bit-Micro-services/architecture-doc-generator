@@ -4,10 +4,15 @@ from __future__ import annotations
 import sqlite3
 from typing import Any, Optional
 
-STATUSES = ["Backlog", "In Progress", "Blocked", "In Review", "Done"]
+STATUSES = ["Backlog", "In Progress", "Blocked", "In Review", "Rework", "Done"]
 PRIORITIES = ["Low", "Medium", "High", "Critical"]
 COMMENT_KINDS = ["update", "blocker", "decision", "handoff"]
 TEST_STATES = ["Not Run", "Running", "Passed", "Failed"]
+DOCUMENT_TYPES = ["Requirements", "Architecture Design", "Technical Design", "Test Result",
+                  "Security & Compliance", "Release & Runbook", "Department Knowledge"]
+DOCUMENT_STATUSES = ["Draft", "Under Review", "Approved", "Rework", "Archived"]
+INDEXING_STATES = ["Not Indexed", "Ready", "Needs Review"]
+CLASSIFICATIONS = ["Public", "Internal", "Confidential", "Restricted"]
 
 MAX_SHORT = 200
 MAX_LONG = 2000
@@ -193,7 +198,9 @@ def phase_readiness(conn: sqlite3.Connection) -> list[dict[str, Any]]:
             " WHERE t.phase_id = ? AND g.kind = 'out'", (phase["id"],)).fetchone()
         blocked = sum(1 for t in tasks if t["status"] == "Blocked")
         percent = int(100 * done / total) if total else 0
-        if tasks and total and done == total and all(t["status"] == "Done" for t in tasks):
+        if any(t["status"] == "Rework" for t in tasks):
+            state = "Rework"
+        elif tasks and total and done == total and all(t["status"] == "Done" for t in tasks):
             state = "Ready"
         elif blocked:
             state = "At Risk"
@@ -204,6 +211,162 @@ def phase_readiness(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         result.append({"phase": phase, "tasks": len(tasks), "gate_total": total, "gate_done": done,
                        "percent": percent, "state": state, "blocked": blocked})
     return result
+
+
+def dashboard_summary(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Return task, gate, test, and review totals for the main dashboard."""
+    counts = {row["status"]: row["total"] for row in conn.execute(
+        "SELECT status, COUNT(*) AS total FROM tasks GROUP BY status")}
+    total = sum(counts.values())
+    done = counts.get("Done", 0)
+    readiness = phase_readiness(conn)
+    tests = {row["test_state"]: row["total"] for row in conn.execute(
+        "SELECT test_state, COUNT(*) AS total FROM artifact_jobs GROUP BY test_state")}
+    return {
+        "total": total,
+        "done": done,
+        "in_progress": counts.get("In Progress", 0),
+        "blocked": counts.get("Blocked", 0),
+        "progress": int(100 * done / total) if total else 0,
+        "ready_phases": sum(1 for phase in readiness if phase["state"] == "Ready"),
+        "phase_count": len(readiness),
+        "tests_passed": tests.get("Passed", 0),
+        "tests_failed": tests.get("Failed", 0),
+        "tests_unknown": sum(value for key, value in tests.items() if key not in ("Passed", "Failed")),
+        "documents_pending": conn.execute(
+            "SELECT COUNT(*) FROM documents WHERE status = 'Under Review'").fetchone()[0],
+    }
+
+
+def current_work_by_role(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT t.id, t.title, t.responsible_role AS role, t.current_work, t.blockers, p.name AS phase_name"
+        " FROM tasks t JOIN phases p ON p.id = t.phase_id WHERE t.status = 'In Progress'"
+        " ORDER BY t.responsible_role, t.id").fetchall()
+    return [dict(row) for row in rows]
+
+
+def list_departments(conn: sqlite3.Connection) -> list[str]:
+    return [row["name"] for row in conn.execute("SELECT name FROM departments ORDER BY id")]
+
+
+def list_documents(conn: sqlite3.Connection, *, query: str = "", document_type: str = "",
+                   department: str = "", status: str = "", owner_role: str = "",
+                   knowledge_only: bool = False) -> list[sqlite3.Row]:
+    sql = "SELECT d.*, t.title AS linked_task_title FROM documents d LEFT JOIN tasks t ON t.id = d.linked_task_id WHERE 1=1"
+    params: list[Any] = []
+    if knowledge_only:
+        sql += " AND d.document_type = ?"
+        params.append("Department Knowledge")
+    if query:
+        query = _text(query, "search", required=False, max_len=200)
+        pattern = f"%{query}%"
+        sql += " AND (d.title LIKE ? OR d.content LIKE ? OR d.source LIKE ? OR d.linked_requirement LIKE ?)"
+        params.extend([pattern] * 4)
+    if document_type:
+        sql += " AND d.document_type = ?"
+        params.append(_choice(document_type, "document type", DOCUMENT_TYPES))
+    if department:
+        sql += " AND d.department = ?"
+        params.append(_choice(department, "department", list_departments(conn)))
+    if status:
+        sql += " AND d.status = ?"
+        params.append(_choice(status, "document status", DOCUMENT_STATUSES))
+    if owner_role:
+        sql += " AND d.owner_role = ?"
+        params.append(_role(conn, owner_role, "owner role"))
+    sql += " ORDER BY d.department, d.document_type, d.title"
+    return conn.execute(sql, params).fetchall()
+
+
+def get_document(conn: sqlite3.Connection, document_id: int) -> Optional[dict[str, Any]]:
+    row = conn.execute(
+        "SELECT d.*, t.title AS linked_task_title FROM documents d"
+        " LEFT JOIN tasks t ON t.id = d.linked_task_id WHERE d.id = ?", (document_id,)
+    ).fetchone()
+    if row is None:
+        return None
+    result = dict(row)
+    result["activity"] = conn.execute(
+        "SELECT * FROM document_activity WHERE document_id = ? ORDER BY id DESC", (document_id,)
+    ).fetchall()
+    result["related"] = conn.execute(
+        "SELECT id, title, document_type, status FROM documents"
+        " WHERE department = ? AND id != ? AND linked_requirement = ? ORDER BY id",
+        (result["department"], document_id, result["linked_requirement"]),
+    ).fetchall() if result["linked_requirement"] else []
+    return result
+
+
+def create_document(conn: sqlite3.Connection, *, title: str, document_type: str, department: str,
+                    owner_role: str, status: str = "Draft", version: str = "1.0",
+                    linked_requirement: str = "", linked_task_id: str = "", source: str = "",
+                    content: str = "", approver: str = "", classification: str = "Internal",
+                    indexing_status: str = "Not Indexed", effective_date: str = "",
+                    author: str = "") -> int:
+    title = _text(title, "title")
+    document_type = _choice(document_type, "document type", DOCUMENT_TYPES)
+    department = _choice(department, "department", list_departments(conn))
+    owner_role = _role(conn, owner_role, "owner role")
+    status = _choice(status, "document status", DOCUMENT_STATUSES)
+    classification = _choice(classification, "classification", CLASSIFICATIONS)
+    indexing_status = _choice(indexing_status, "indexing status", INDEXING_STATES)
+    version = _text(version, "version", max_len=40)
+    linked_requirement = _text(linked_requirement, "linked requirement", required=False)
+    source = _text(source, "source", required=False, max_len=500)
+    content = _text(content, "content", required=False, max_len=MAX_LONG)
+    approver = _text(approver, "approver", required=False, max_len=80)
+    effective_date = _text(effective_date, "effective date", required=False, max_len=20)
+    linked_task = None
+    if linked_task_id:
+        if not linked_task_id.isascii() or not linked_task_id.isdigit():
+            raise ValidationError("linked task must be a valid id")
+        linked_task = int(linked_task_id)
+        if not conn.execute("SELECT 1 FROM tasks WHERE id = ?", (linked_task,)).fetchone():
+            raise ValidationError("linked task is invalid")
+    cur = conn.execute(
+        "INSERT INTO documents (title, document_type, department, owner_role, status, version,"
+        " linked_requirement, linked_task_id, source, content, approver, classification, indexing_status,"
+        " effective_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (title, document_type, department, owner_role, status, version, linked_requirement, linked_task,
+         source, content, approver, classification, indexing_status, effective_date),
+    )
+    doc_id = int(cur.lastrowid)
+    conn.execute("INSERT INTO document_activity (document_id, author, role, action, note) VALUES (?,?,?,?,?)",
+                 (doc_id, _text(author, "author", required=False, max_len=80) or owner_role,
+                  owner_role, "created", "Document registered"))
+    conn.commit()
+    return doc_id
+
+
+def update_document_status(conn: sqlite3.Connection, document_id: int, *, status: str,
+                           approver: str = "", author: str = "", role: str = "") -> None:
+    status = _choice(status, "document status", DOCUMENT_STATUSES)
+    document = conn.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
+    if document is None:
+        raise LookupError("document not found")
+    approver = _text(approver, "approver", required=False, max_len=80)
+    author = _text(author, "author", required=False, max_len=80) or document["owner_role"]
+    role = _role(conn, role or document["owner_role"], "role")
+    if status == "Approved" and not approver:
+        raise ValidationError("approver is required when approving a document")
+    conn.execute(
+        "UPDATE documents SET status = ?, approver = ?, indexing_status = ?,"
+        " updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?",
+        (status, approver, "Ready" if status == "Approved" else "Needs Review", document_id),
+    )
+    conn.execute("INSERT INTO document_activity (document_id, author, role, action, note) VALUES (?,?,?,?,?)",
+                 (document_id, author, role, "status", f"Status changed to {status}"))
+    conn.commit()
+
+
+def knowledge_mode() -> dict[str, str]:
+    return {
+        "default": "Manual Only",
+        "local": "Local AI/RAG Ready (not configured)",
+        "cloud": "Cloud AI Disabled / Not Configured",
+        "notice": "Manual Only does not send document or query data to any AI service.",
+    }
 
 
 def list_jobs(conn: sqlite3.Connection) -> list[sqlite3.Row]:

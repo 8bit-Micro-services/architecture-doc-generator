@@ -1,13 +1,32 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>SDLC phase flow &amp; gate readiness</h2>
+<div class="page-heading"><div><p class="eyebrow">PROJECT OVERVIEW</p><h2>SDLC delivery dashboard</h2>
+<p class="muted">Progress, phase readiness, quality signals, and current work in one place.</p></div>
+<a class="button-link" href="/board">Open workboard</a></div>
+<section class="progress-panel" aria-label="Overall project progress">
+  <div class="progress-head"><h3>Overall project progress</h3><strong>{{ summary.progress }}%</strong></div>
+  <progress max="100" value="{{ summary.progress }}" aria-label="Overall project progress: {{ summary.progress }} percent"></progress>
+  <p class="muted">{{ summary.done }} of {{ summary.total }} tasks complete</p>
+</section>
+<section class="summary-grid" aria-label="Project summary">
+  <article class="summary-card"><span>Total tasks</span><strong>{{ summary.total }}</strong></article>
+  <article class="summary-card success"><span>Done</span><strong>{{ summary.done }}</strong></article>
+  <article class="summary-card active"><span>In progress</span><strong>{{ summary.in_progress }}</strong></article>
+  <article class="summary-card danger"><span>Blocked</span><strong>{{ summary.blocked }}</strong></article>
+  <article class="summary-card"><span>Gate readiness</span><strong>{{ summary.ready_phases }}/{{ summary.phase_count }}</strong><small>phases ready</small></article>
+  <article class="summary-card"><span>Test status</span><strong>{{ summary.tests_passed }} passed</strong><small>{{ summary.tests_failed }} failed · {{ summary.tests_unknown }} unknown</small></article>
+  <article class="summary-card"><span>Documents awaiting review</span><strong>{{ summary.documents_pending }}</strong><small><a href="/documents?status=Under+Review">Review documents</a></small></article>
+</section>
+<div class="section-heading"><div><p class="eyebrow">DELIVERY LIFECYCLE</p><h2>SDLC phase flow &amp; gate readiness</h2></div></div>
 <ol class="flow">
 {% for r in readiness %}
   <li class="state-{{ r.state|replace(' ', '-')|lower }}">
-    <h3><a href="/board?phase={{ r.phase.id }}">{{ r.phase.position }}. {{ r.phase.name }}</a></h3>
+    <span class="phase-number">{{ "%02d"|format(r.phase.position) }}</span>
+    <h3><a href="/board?phase={{ r.phase.id }}">{{ r.phase.name }}</a></h3>
     <p class="muted">{{ r.phase.iso_process }}</p>
-    <p><strong>{{ r.state }}</strong> &middot; gate-out {{ r.gate_done }}/{{ r.gate_total }} ({{ r.percent }}%) &middot; {{ r.tasks }} task(s){% if r.blocked %} &middot; {{ r.blocked }} blocked{% endif %}</p>
-    <progress max="100" value="{{ r.percent }}"></progress>
+    <p><span class="status-badge state-{{ r.state|replace(' ', '-')|lower }}">{{ r.state }}</span>
+    <span class="muted">Gate-out {{ r.gate_done }}/{{ r.gate_total }} · {{ r.tasks }} task(s){% if r.blocked %} · {{ r.blocked }} blocked{% endif %}</span></p>
+    <progress max="100" value="{{ r.percent }}" aria-label="{{ r.phase.name }} gate readiness {{ r.percent }} percent"></progress>
     <dl>
       <dt>Accountable / Responsible</dt><dd>{{ r.phase.accountable }} / {{ r.phase.responsible }}</dd>
       <dt>Inputs</dt><dd>{{ r.phase.inputs|replace('\n', '; ') }}</dd>
@@ -19,6 +38,22 @@
   </li>
 {% endfor %}
 </ol>
+<section class="work-section">
+  <div class="section-heading"><div><p class="eyebrow">ACTIVE OWNERSHIP</p><h2>Current work by role</h2></div></div>
+  {% if current_work %}
+  <div class="work-grid">
+    {% for item in current_work %}
+    <article class="work-card">
+      <div class="work-meta"><strong>{{ item.role }}</strong><span class="status-badge state-in-progress">In Progress</span></div>
+      <h3><a href="/tasks/{{ item.id }}">{{ item.title }}</a></h3>
+      <p>{{ item.current_work or "No current-work summary recorded." }}</p>
+      <p class="muted">{{ item.phase_name }}</p>
+      {% if item.blockers %}<p class="blocker"><strong>Blocker:</strong> {{ item.blockers }}</p>{% else %}<p class="muted">No blocker recorded</p>{% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}<p class="empty-state">No tasks are currently in progress.</p>{% endif %}
+</section>
 <h2>Roles</h2>
 <ul class="roles">{% for role in roles %}<li><a href="/board?role={{ role.name|urlencode }}"><strong>{{ role.name }}</strong></a> &ndash; {{ role.description }}</li>{% endfor %}</ul>
 {% endblock %}

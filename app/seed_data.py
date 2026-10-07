@@ -189,6 +189,30 @@ JOBS: list[tuple[str, str, str, str, str, str]] = [
      "architecture.drawio", "architecture.png", "architecture-presentation.pptx", "Not Run"),
 ]
 
+DEPARTMENTS = ["HR", "IT/Engineering", "Finance", "Operations"]
+
+ARCHITECTURE_DOCUMENTS = [
+    ("Architecture executive summary", "Architecture Design", "Executive summary for architecture review. Scope, key decisions, risks, and approval status are captured here.", "docs/architecture/01-executive-summary.md", "REQ-001", "Approved", "Solution Architect", "Architecture Review Board"),
+    ("Requirements traceability", "Requirements", "Traceability matrix connecting REQ-001 through REQ-009 to SDLC tasks, acceptance criteria, and evidence.", "docs/architecture/02-requirements-traceability.md", "REQ-001", "Under Review", "Business Analyst", ""),
+    ("System context (C4 L1)", "Architecture Design", "Users: Product Owner, Architect, Developer, QA. The workboard connects SDLC tasks, a SQLite store, department documents, and architecture outputs. No AI provider is called in Manual Only mode.", "docs/architecture/03-system-context.drawio", "REQ-002", "Under Review", "Solution Architect", ""),
+    ("Container architecture (C4 L2)", "Architecture Design", "FastAPI server-rendered UI, SQLite persistence, local document previews, and generated-output registry. Deployment is local or behind an explicitly configured private service.", "docs/architecture/04-container-architecture.drawio", "REQ-002", "Draft", "Solution Architect", ""),
+    ("Component architecture (C4 L3)", "Architecture Design", "Components: dashboard, task workflow, document library, department knowledge search, and architecture job tracker.", "docs/architecture/05-component-architecture.drawio", "REQ-002", "Draft", "Technical Lead", ""),
+    ("Department knowledge data flow", "Architecture Design", "Manual workflow: add document, assign one department, classify and review, approve, then mark indexing Ready. Search is constrained by the selected department.", "docs/architecture/06-data-flow.drawio", "REQ-003", "Draft", "Solution Architect", ""),
+    ("Deployment architecture", "Architecture Design", "Local execution uses a Python process and SQLite file. An online deployment requires private authentication, persistent storage, HTTPS, and operational controls.", "docs/architecture/07-deployment-architecture.drawio", "REQ-006", "Draft", "DevOps Engineer", ""),
+    ("Security architecture", "Security & Compliance", "Manual Only sends no document or query data to AI. HR/PII documents must remain private. Production RAG requires RBAC, department isolation, audit trails, encryption, and configured local/cloud providers.", "docs/architecture/08-security-architecture.md", "REQ-003", "Under Review", "Security Reviewer", ""),
+    ("Architecture decision records", "Architecture Design", "ADR-001: retain server-rendered FastAPI and SQLite for the local MVP. ADR-002: manual knowledge search is the default and no external AI calls are made.", "docs/architecture/09-architecture-decisions.md", "REQ-002", "Draft", "Solution Architect", ""),
+    ("Architecture review presentation", "Architecture Design", "Presentation package checklist: summary, scope, workflow, context, containers, components, department knowledge, security, deployment, risks, and quality gates. PPTX generation is not implemented in this MVP.", "docs/architecture/10-architecture-presentation.pptx", "REQ-005", "Draft", "Technical Writer", ""),
+    ("Validation and E2E report", "Test Result", "Seed validation evidence: document metadata is reviewed in the library; automated tests exercise routes, filtering, and lifecycle validation. Attach CI evidence before release.", "tests/reports/architecture-validation.md", "REQ-007", "Under Review", "QA Engineer", ""),
+]
+
+KNOWLEDGE_DOCUMENTS = [
+    ("Leave request policy (demo)", "HR", "Employees submit leave requests to their manager through the standard internal process. This fictional demo policy contains no employee records or personal data.", "knowledge/hr/leave-policy-demo.md", "Approved"),
+    ("People onboarding checklist (demo)", "HR", "Managers confirm workspace access, orientation, and policy acknowledgement for new starters. Use the approved HR process; do not store personal records in this demo.", "knowledge/hr/onboarding-sop-demo.md", "Under Review"),
+    ("Engineering change procedure (demo)", "IT/Engineering", "Changes require peer review, automated tests, and a documented rollback plan before production release.", "knowledge/engineering/change-procedure-demo.md", "Approved"),
+    ("Expense review procedure (demo)", "Finance", "Expense submissions are checked against the current internal policy and approved by an authorised budget owner.", "knowledge/finance/expense-review-demo.md", "Approved"),
+    ("Service incident response (demo)", "Operations", "Record impact, assign an incident owner, communicate status, and document recovery and follow-up actions.", "knowledge/operations/incident-response-demo.md", "Approved"),
+]
+
 
 def seed(conn: sqlite3.Connection) -> None:
     conn.executemany("INSERT INTO roles (name, description) VALUES (?, ?)", ROLES)
@@ -218,3 +242,30 @@ def seed(conn: sqlite3.Connection) -> None:
     conn.executemany(
         "INSERT INTO artifact_jobs (name, input_documents, drawio_output, image_output, pptx_output,"
         " test_state) VALUES (?,?,?,?,?,?)", JOBS)
+
+
+def seed_documents(conn: sqlite3.Connection) -> None:
+    conn.executemany("INSERT INTO departments (name) VALUES (?)", [(name,) for name in DEPARTMENTS])
+    architect_task = conn.execute(
+        "SELECT id FROM tasks WHERE title = ?", ("Define canonical IR schema v1",)
+    ).fetchone()
+    architecture_task_id = architect_task["id"] if architect_task else None
+    for title, doc_type, content, source, requirement, status, owner, approver in ARCHITECTURE_DOCUMENTS:
+        conn.execute(
+            "INSERT INTO documents (title, document_type, department, owner_role, status, version,"
+            " linked_requirement, linked_task_id, source, content, approver, classification, indexing_status)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (title, doc_type, "IT/Engineering", owner, status, "1.0", requirement,
+             architecture_task_id, source, content, approver, "Internal",
+             "Ready" if status == "Approved" else "Needs Review"),
+        )
+    for title, department, content, source, status in KNOWLEDGE_DOCUMENTS:
+        conn.execute(
+            "INSERT INTO documents (title, document_type, department, owner_role, status, version,"
+            " source, content, classification, indexing_status, effective_date)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (title, "Department Knowledge", department,
+             "Business Analyst" if department == "HR" else "Technical Writer",
+             status, "1.0", source, content, "Internal",
+             "Ready" if status == "Approved" else "Needs Review", "2026-01-01"),
+        )

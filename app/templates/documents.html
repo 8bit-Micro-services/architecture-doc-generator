@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">DOCUMENT LIBRARY</p><h2>Documents</h2>
+<p class="muted">Browse architecture outputs, work products, and department knowledge with lifecycle metadata.</p></div></div>
+<form method="get" action="/documents" class="filter-panel">
+  <label>Search title, content, source, requirement <input name="q" value="{{ filters.q }}" maxlength="200"></label>
+  <label>Type <select name="document_type"><option value="">All types</option>{% for item in types %}<option value="{{ item }}" {{ "selected" if filters.document_type == item }}>{{ item }}</option>{% endfor %}</select></label>
+  <label>Department <select name="department"><option value="">All departments</option>{% for item in departments %}<option value="{{ item }}" {{ "selected" if filters.department == item }}>{{ item }}</option>{% endfor %}</select></label>
+  <label>Status <select name="status"><option value="">All statuses</option>{% for item in statuses %}<option value="{{ item }}" {{ "selected" if filters.status == item }}>{{ item }}</option>{% endfor %}</select></label>
+  <label>Owner role <select name="owner_role"><option value="">All roles</option>{% for item in roles %}<option value="{{ item.name }}" {{ "selected" if filters.owner_role == item.name }}>{{ item.name }}</option>{% endfor %}</select></label>
+  <button type="submit">Apply filters</button><a href="/documents">Clear</a>
+</form>
+<p class="muted">{{ documents|length }} document(s)</p>
+{% if documents %}
+<div class="document-grid">
+{% for d in documents %}
+  <article class="document-card">
+    <div class="work-meta"><span class="type-label">{{ d.document_type }}</span><span class="status-badge state-{{ d.status|lower|replace(' ', '-') }}">{{ d.status }}</span></div>
+    <h3><a href="/documents/{{ d.id }}">{{ d.title }}</a></h3>
+    <p>{{ d.department }} · {{ d.owner_role }} · v{{ d.version }}</p>
+    <p class="muted">{{ d.content|truncate(190) }}</p>
+    <p class="muted">Updated {{ d.updated_at }}{% if d.approver %} · Approved by {{ d.approver }}{% endif %}</p>
+  </article>
+{% endfor %}
+</div>
+{% else %}<p class="empty-state">No documents match these filters. Clear the filters or add a document below.</p>{% endif %}
+<details class="form-disclosure"><summary>Register a document</summary>
+<form method="post" action="/documents" class="form-grid">
+  <label>Title <input name="title" required maxlength="200"></label>
+  <label>Document type <select name="document_type" required>{% for item in types %}<option>{{ item }}</option>{% endfor %}</select></label>
+  <label>Department <select name="department" required>{% for item in departments %}<option>{{ item }}</option>{% endfor %}</select></label>
+  <label>Owner role <select name="owner_role" required>{% for item in roles %}<option>{{ item.name }}</option>{% endfor %}</select></label>
+  <label>Status <select name="status">{% for item in statuses %}<option>{{ item }}</option>{% endfor %}</select></label>
+  <label>Version <input name="version" value="1.0" maxlength="40" required></label>
+  <label>Linked requirement <input name="linked_requirement" maxlength="200"></label>
+  <label>Linked task ID <input name="linked_task_id" inputmode="numeric"></label>
+  <label>Source or path <input name="source" maxlength="500"></label>
+  <label>Classification <select name="classification"><option>Public</option><option selected>Internal</option><option>Confidential</option><option>Restricted</option></select></label>
+  <label>Indexing status <select name="indexing_status"><option>Not Indexed</option><option>Ready</option><option>Needs Review</option></select></label>
+  <label>Effective date <input name="effective_date" type="date"></label>
+  <label>Approver <input name="approver" maxlength="80"></label>
+  <label>Registered by <input name="author" maxlength="80"></label>
+  <label class="wide">Content / preview <textarea name="content" maxlength="2000"></textarea></label>
+  <button type="submit">Save document</button>
+</form></details>
+{% endblock %}

@@ -100,3 +100,42 @@ def test_update_contract_and_gate_mismatch(conn):
         services.set_gate_item(conn, 4, gate_id, True)
     with pytest.raises(services.ValidationError):
         services.list_tasks(conn, phase="²")
+
+
+def test_dashboard_summary_and_current_work(conn):
+    summary = services.dashboard_summary(conn)
+    assert summary["total"] == 13
+    assert summary["done"] == 3
+    assert summary["progress"] == 23
+    assert summary["blocked"] == 1
+    work = services.current_work_by_role(conn)
+    assert work and all(item["role"] and item["title"] for item in work)
+    conn.execute("UPDATE tasks SET status = 'Rework' WHERE id = 3")
+    assert next(r for r in services.phase_readiness(conn) if r["phase"]["name"] == "Design")["state"] == "Rework"
+
+
+def test_document_search_department_and_create(conn):
+    hr_docs = services.list_documents(conn, query="demo", department="HR", knowledge_only=True)
+    assert hr_docs and all(doc["department"] == "HR" for doc in hr_docs)
+    assert services.list_documents(conn, query="leave", department="Finance", knowledge_only=True) == []
+    assert {doc["department"] for doc in services.list_documents(conn, document_type="Architecture Design")} == {
+        "IT/Engineering"
+    }
+    doc_id = services.create_document(
+        conn, title="Procedure", document_type="Department Knowledge", department="HR",
+        owner_role="Business Analyst", source="hr/procedure.md", content="Demo only",
+    )
+    assert services.get_document(conn, doc_id)["activity"][0]["action"] == "created"
+    with pytest.raises(services.ValidationError):
+        services.create_document(
+            conn, title="Bad", document_type="Department Knowledge", department="Unknown",
+            owner_role="Business Analyst",
+        )
+
+
+def test_document_approval_requires_approver(conn):
+    doc = services.list_documents(conn)[0]
+    with pytest.raises(services.ValidationError):
+        services.update_document_status(conn, doc["id"], status="Approved")
+    services.update_document_status(conn, doc["id"], status="Approved", approver="Architect")
+    assert services.get_document(conn, doc["id"])["approver"] == "Architect"
