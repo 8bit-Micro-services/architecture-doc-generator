@@ -108,6 +108,7 @@ def test_dashboard_summary_and_current_work(conn):
     assert summary["done"] == 3
     assert summary["progress"] == 23
     assert summary["blocked"] == 1
+    assert summary["documents_pending"] > 0
     work = services.current_work_by_role(conn)
     assert work and all(item["role"] and item["title"] for item in work)
     conn.execute("UPDATE tasks SET status = 'Rework' WHERE id = 3")
@@ -130,6 +131,11 @@ def test_document_search_department_and_create(conn):
         services.create_document(
             conn, title="Bad", document_type="Department Knowledge", department="Unknown",
             owner_role="Business Analyst",
+        )
+    with pytest.raises(services.ValidationError):
+        services.create_document(
+            conn, title="Unapproved", document_type="Requirements", department="IT/Engineering",
+            owner_role="Business Analyst", status="Approved",
         )
 
 

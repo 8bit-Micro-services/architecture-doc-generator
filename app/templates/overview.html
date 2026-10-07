@@ -15,9 +15,14 @@
   <article class="summary-card danger"><span>Blocked</span><strong>{{ summary.blocked }}</strong></article>
   <article class="summary-card"><span>Gate readiness</span><strong>{{ summary.ready_phases }}/{{ summary.phase_count }}</strong><small>phases ready</small></article>
   <article class="summary-card"><span>Test status</span><strong>{{ summary.tests_passed }} passed</strong><small>{{ summary.tests_failed }} failed · {{ summary.tests_unknown }} unknown</small></article>
-  <article class="summary-card"><span>Documents awaiting review</span><strong>{{ summary.documents_pending }}</strong><small><a href="/documents?status=Under+Review">Review documents</a></small></article>
+  <article class="summary-card"><span>Documents awaiting review/approval</span><strong>{{ summary.documents_pending }}</strong><small><a href="/documents?status=Under+Review">Review documents</a></small></article>
 </section>
 <div class="section-heading"><div><p class="eyebrow">DELIVERY LIFECYCLE</p><h2>SDLC phase flow &amp; gate readiness</h2></div></div>
+<ol class="phase-stepper" aria-label="SDLC phase step bar">
+{% for r in readiness %}
+  <li class="step-{{ r.state|replace(' ', '-')|lower }}"><a href="/board?phase={{ r.phase.id }}"><span>{{ "%02d"|format(r.phase.position) }}</span>{{ r.phase.name }}</a></li>
+{% endfor %}
+</ol>
 <ol class="flow">
 {% for r in readiness %}
   <li class="state-{{ r.state|replace(' ', '-')|lower }}">

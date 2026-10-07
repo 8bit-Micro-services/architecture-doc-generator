@@ -178,7 +178,7 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
     @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(request: Request, department: str = "", q: str = "",
                   conn: sqlite3.Connection = Conn):
-        docs = services.list_documents(conn, query=q, department=department, knowledge_only=True)
+        docs = services.list_documents(conn, query=q, department=department, knowledge_only=True) if department else []
         return render(request, "knowledge.html", documents=docs, departments=services.list_departments(conn),
                       selected_department=department, query=q, mode=services.knowledge_mode())
 

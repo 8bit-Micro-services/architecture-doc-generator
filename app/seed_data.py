@@ -245,7 +245,7 @@ def seed(conn: sqlite3.Connection) -> None:
 
 
 def seed_documents(conn: sqlite3.Connection) -> None:
-    conn.executemany("INSERT INTO departments (name) VALUES (?)", [(name,) for name in DEPARTMENTS])
+    conn.executemany("INSERT OR IGNORE INTO departments (name) VALUES (?)", [(name,) for name in DEPARTMENTS])
     architect_task = conn.execute(
         "SELECT id FROM tasks WHERE title = ?", ("Define canonical IR schema v1",)
     ).fetchone()

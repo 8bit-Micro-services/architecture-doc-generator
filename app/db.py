@@ -101,7 +101,7 @@ def init_db(db_path: str | Path) -> None:
         conn.executescript(SCHEMA)
         if conn.execute("SELECT COUNT(*) FROM roles").fetchone()[0] == 0:
             seed(conn)
-        if conn.execute("SELECT COUNT(*) FROM departments").fetchone()[0] == 0:
+        if conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0] == 0:
             from .seed_data import seed_documents
 
             seed_documents(conn)

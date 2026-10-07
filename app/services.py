@@ -234,7 +234,7 @@ def dashboard_summary(conn: sqlite3.Connection) -> dict[str, Any]:
         "tests_failed": tests.get("Failed", 0),
         "tests_unknown": sum(value for key, value in tests.items() if key not in ("Passed", "Failed")),
         "documents_pending": conn.execute(
-            "SELECT COUNT(*) FROM documents WHERE status = 'Under Review'").fetchone()[0],
+            "SELECT COUNT(*) FROM documents WHERE status IN ('Draft', 'Under Review')").fetchone()[0],
     }
 
 
@@ -316,6 +316,8 @@ def create_document(conn: sqlite3.Connection, *, title: str, document_type: str,
     source = _text(source, "source", required=False, max_len=500)
     content = _text(content, "content", required=False, max_len=MAX_LONG)
     approver = _text(approver, "approver", required=False, max_len=80)
+    if status == "Approved" and not approver:
+        raise ValidationError("approver is required when registering an approved document")
     effective_date = _text(effective_date, "effective date", required=False, max_len=20)
     linked_task = None
     if linked_task_id:
